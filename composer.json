@@ -1,0 +1,27 @@
+{
+  "name": "lvis/wplib",
+  "type": "library",
+  "version": "0.0.1",
+  "description": "Wordpress: Lib for rapid prototyping",
+  "keywords": [
+    "wordpress",
+    "framework"
+  ],
+  "homepage": "https://github.com/lvis/wplib",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Vitalii Lupu",
+      "email": "vitaliix@gmail.com",
+      "homepage": "https://github.com/lvis"
+    }
+  ],
+  "require": {
+    "php": ">=7"
+  },
+  "autoload": {
+    "psr-4": {
+      "wp\\": "src/"
+    }
+  }
+}
