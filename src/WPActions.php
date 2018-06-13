@@ -53,6 +53,11 @@ final class WPActions
      */
     const NAV_MENU_ITEM_ARGS = 'nav_menu_item_args';
     /**
+     * @const Filters the HTML list content for navigation menus.
+     * @url https://developer.wordpress.org/reference/hooks/wp_nav_menu_items/
+     */
+    const NAV_MENU_ITEMS = 'wp_nav_menu_items';
+    /**
      * @const Filters the HTML attributes applied to a menu item's anchor element.
      * @url https://developer.wordpress.org/reference/hooks/nav_menu_link_attributes/
      */
