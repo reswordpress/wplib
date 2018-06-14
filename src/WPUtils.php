@@ -228,35 +228,6 @@ final class WPUtils
             fclose($fp);
         }
     }
-
-    /**
-     * WordPress Login Logout Redirect
-     * @return string - site url
-     */
-    static function handleLogout()
-    {
-        wp_redirect(home_url());
-        exit();
-    }
-
-    /**
-     * WordPress Login page Logo URL
-     * @return string - site url
-     */
-    static function getLoginLogoUrl()
-    {
-        return home_url();
-    }
-
-    /**
-     * WordPress Login page Logo Title
-     * @return string - site name
-     */
-    static function getLoginLogoTitle()
-    {
-        return get_bloginfo('name');
-    }
-
     /**
      * Checks if current user is restricted or not
      * @return bool

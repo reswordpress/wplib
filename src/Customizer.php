@@ -13,7 +13,7 @@ use WP_Customize_Manager;
 
 class Customizer
 {
-    //Lib Custom
+    //CONST
     const SITE_WATERMARK = 'themeSiteWatermark';
     const SITE_EMAIL = 'themeSiteEmail';
     const SITE_PHONES = 'themeSitePhone';
@@ -42,15 +42,46 @@ class Customizer
         self::SITE_PHONES => "fa fa-phone",
         self::SITE_SKYPE => "fa fa-skype",
     ];
-    protected static $instance = null;
     /**
      * Register meta settings for widget sidebars.
      * @global \WP_Customize_Manager $wp_customize
      */
     private $widgetAreaScriptData = '';
+    //Singleton Instance
+    protected static $instance = null;
 
-    protected function __construct(WP_Customize_Manager $wp_customize)
+    public static function i()
     {
+        if (!self::$instance) {
+            self::$instance = new static();
+        }
+
+        return self::$instance;
+    }
+
+    protected function __construct()
+    {
+        add_action(WPActions::CUSTOMIZER_REGISTER, [$this, 'registerCustomizer']);
+        //Remove: Custom CSS Section
+//        add_action(WPActions::CUSTOMIZER_REGISTER, [$this, 'removeCssSection'], 15);
+    }
+
+    /**
+     * Remove the additional CSS section, introduced in 4.7, from the Customizer.
+     * @param $wp_customize WP_Customize_Manager
+     */
+    function removeCssSection($wp_customize)
+    {
+        $wp_customize->remove_section('custom_css');
+    }
+
+    /**
+     * Init Customizer
+     * @param WP_Customize_Manager $wp_customize
+     */
+    function registerCustomizer(WP_Customize_Manager $wp_customize)
+    {
+        Customizer::i($wp_customize);
         add_action(WPActions::ENQUEUE_SCRIPTS_CUSTOMIZER, [$this, 'enqueueScriptsCustomizer']);
         add_action(WPActions::CUSTOMIZER_INIT, [$this, 'enqueueScriptsCustomizerPreview']);
         add_action(WPActions::CUSTOMIZER_AFTER_SAVE, [$this, 'handleActionAfterSave']);
@@ -474,15 +505,6 @@ class Customizer
     static function getSettingsIconFa($settings)
     {
         return self::$settingsIconsFa[$settings];
-    }
-
-    public static function i(WP_Customize_Manager $wp_customize)
-    {
-        if (!self::$instance) {
-            self::$instance = new static($wp_customize);
-        }
-
-        return self::$instance;
     }
 
     /** Load Styles & Scripts for: Customizer */
