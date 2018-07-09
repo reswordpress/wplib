@@ -1,14 +1,6 @@
-<?php
-/**
- * Created by IntelliJ IDEA.
- * User: lvis
- * Date: 6/14/18
- * Time: 5:30 PM
- */
+<?php /** Author: Vitali Lupu <vitaliix@gmail.com> */
 
 namespace wp;
-
-
 final class UtilsTheme
 {
     //Singleton Instance
@@ -176,10 +168,12 @@ final class UtilsTheme
             }
         }
     }
+
     /**
      * Show Posts related to current Author only
      */
-    function showOnlyRelatedPosts($wp_query) {
+    function showOnlyRelatedPosts($wp_query)
+    {
         global $current_user;
         if (is_admin() && !current_user_can('edit_others_posts')) {
             $wp_query->set('author', $current_user->ID);

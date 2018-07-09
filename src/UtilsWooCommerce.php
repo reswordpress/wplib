@@ -1,14 +1,6 @@
-<?php
-/**
- * Created by IntelliJ IDEA.
- * User: lvis
- * Date: 6/14/18
- * Time: 2:55 PM
- */
+<?php /** Author: Vitali Lupu <vitaliix@gmail.com> */
 
 namespace wp;
-
-
 final class UtilsWooCommerce
 {
     protected static $instance = null;
@@ -21,6 +13,7 @@ final class UtilsWooCommerce
 
         return self::$instance;
     }
+
     protected function __construct()
     {
         /** Add WooComerce Theme Support */
@@ -28,7 +21,7 @@ final class UtilsWooCommerce
         add_action('woocommerce_login_redirect', [$this, 'handleWooCommerceLoginRedirect'], 10, 1);
         /** Add: Menu Item Add to cart*/
         add_filter(WPActions::NAV_MENU_ITEMS, [$this, 'handleNavMenuItems'], 10, 2);
-        add_filter( 'woocommerce_add_to_cart_fragments', [$this, 'handleNavMenuItemsAddToCart'] );
+        add_filter('woocommerce_add_to_cart_fragments', [$this, 'handleNavMenuItemsAddToCart']);
         /** Remove: Product Link open and close tag*/
         remove_action('woocommerce_before_shop_loop_item',
             'woocommerce_template_loop_product_link_open', 10);
@@ -56,6 +49,7 @@ final class UtilsWooCommerce
         remove_action('woocommerce_after_shop_loop_item',
             'woocommerce_template_loop_add_to_cart', 10);
     }
+
     /** Add WooComerce Theme Support */
     function addSupportOfWooCommerce()
     {
@@ -73,15 +67,19 @@ final class UtilsWooCommerce
             ),
         ) );*/
     }
+
     static public function getProductLink()
     {
         /**@var $product \WC_Product */
         global $product;
         return esc_url(apply_filters('woocommerce_loop_product_link', get_the_permalink(), $product));
     }
-    static public function getHtmlProductSale(){
+
+    static public function getHtmlProductSale()
+    {
 
     }
+
     function getProductRatingMessage()
     {
         /**@var $product \WC_Product */
@@ -98,7 +96,9 @@ final class UtilsWooCommerce
         }
         return $textRating;
     }
-    function getAddToCartLink(){
+
+    function getAddToCartLink()
+    {
         $activePlugins = apply_filters('active_plugins', get_option('active_plugins'));
         $content = '';
         if (in_array('woocommerce/woocommerce.php', $activePlugins)) {
@@ -118,12 +118,13 @@ final class UtilsWooCommerce
         }
         return $content;
     }
+
     /**
      * @param string $items The HTML list content for the menu items.
-     * @param stdClass $args An object containing wp_nav_menu() arguments.
+     * @param \stdClass $args An object containing wp_nav_menu() arguments.
      * @return string Modified HTML list content for the menu items.
      */
-    function handleNavMenuItems(string $items, stdClass $args)
+    function handleNavMenuItems(string $items, \stdClass $args)
     {
         $linkAddToCart = $this->getAddToCartLink();
         if ($linkAddToCart !== '' && 'primary' !== $args->theme_location) {
@@ -134,10 +135,12 @@ final class UtilsWooCommerce
         return $items;
     }
 
-    function handleNavMenuItemsAddToCart($fragments) {
+    function handleNavMenuItemsAddToCart($fragments)
+    {
         $fragments['a.cart-contents'] = $this->getAddToCartLink();
         return $fragments;
     }
+
     function handleWooCommerceLoginRedirect($redirect)
     {
         $redirect_page_id = url_to_postid($redirect);
@@ -148,6 +151,7 @@ final class UtilsWooCommerce
         }
         return get_permalink(get_option('woocommerce_myaccount_page_id')) . 'edit-account/';
     }
+
     function handleBeforeShopLoopItem()
     {
         echo "<div class='card card-product'>";
@@ -167,7 +171,7 @@ final class UtilsWooCommerce
     function handleBeforeShopLoopItemTitle()
     {
         $productTitle = get_the_title();
-        echo "<h5 class='card-title'><a href='{$this->getProductLink()}'>{$productTitle}</a></h5>";
+        echo "<h5 class='card-title text-hide-overflow'><a href='{$this->getProductLink()}'>{$productTitle}</a></h5>";
     }
 
     function handleAfterShopLoopItemTitle()

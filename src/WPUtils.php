@@ -1,9 +1,4 @@
-<?php
-/**
- * Author: Vitali Lupu <vitaliix@gmail.com>
- * Date: 3/5/18
- * Time: 6:10 PM
- */
+<?php /** Author: Vitali Lupu <vitaliix@gmail.com> */
 
 namespace wp;
 
@@ -228,6 +223,7 @@ final class WPUtils
             fclose($fp);
         }
     }
+
     /**
      * Checks if current user is restricted or not
      * @return bool
