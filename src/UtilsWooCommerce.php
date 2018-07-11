@@ -20,7 +20,7 @@ final class UtilsWooCommerce
         add_action('after_setup_theme', [$this, 'addSupportOfWooCommerce']);
         add_action('woocommerce_login_redirect', [$this, 'handleWooCommerceLoginRedirect'], 10, 1);
         /** Add: Menu Item Add to cart*/
-        add_filter(WPActions::NAV_MENU_ITEMS, [$this, 'handleNavMenuItems'], 10, 2);
+        add_filter(WPActions::NAV_MENU_ITEM_LINK_ATTRIBUTES, [$this, 'handleNavMenuItemLinkAttributes'], 10, 4);
         add_filter('woocommerce_add_to_cart_fragments', [$this, 'handleNavMenuItemsAddToCart']);
         /** Remove: Product Link open and close tag*/
         remove_action('woocommerce_before_shop_loop_item',
@@ -97,42 +97,35 @@ final class UtilsWooCommerce
         return $textRating;
     }
 
-    function getAddToCartLink()
+    /**
+     * Filters the HTML attributes applied to a menu item's anchor element.
+     * @param array $attributes The HTML attributes applied to the menu item's `<a>` element, empty strings are ignored.
+     * @param \WP_Post $item The current menu item.
+     * @param \stdClass $args An object of wp_nav_menu() arguments.
+     * @param int $depth Depth of menu item. Used for padding.
+     * @return array
+     */
+    function handleNavMenuItemLinkAttributes(array $attributes, \WP_Post $item, \stdClass $args, int $depth)
     {
         $activePlugins = apply_filters('active_plugins', get_option('active_plugins'));
-        $content = '';
-        if (in_array('woocommerce/woocommerce.php', $activePlugins)) {
-            $countCartContents = WC()->cart->get_cart_contents_count();
-            $titleMenuItem = __('View your shopping cart', 'your-theme-slug');
+        if (in_array('woocommerce/woocommerce.php', $activePlugins) && $args->theme_location == '' && $depth == 0){
             $urlMenuItem = wc_get_cart_url();
-            if ($countCartContents == 0) {
-                $urlMenuItem = get_permalink(wc_get_page_id('shop'));
-                $titleMenuItem = __('Start shopping', 'your-theme-slug');
-            }
-            $textCartItems = _n('%d item', '%d items', $countCartContents, 'woocommerce');
-            $textCartItems = sprintf($textCartItems, $countCartContents);
-            $textCartTotal = WC()->cart->get_cart_total();
-            //$urlMenuItem = '#';
-            $content = "<a href='{$urlMenuItem}' title='{$titleMenuItem}' class='cart-contents' tabindex='7'>
-            <i class='fa fa-shopping-cart'></i> {$textCartItems} - {$textCartTotal}</a>";
-        }
-        return $content;
-    }
+            if ($urlMenuItem == $attributes['href']){
+                $countCartContents = WC()->cart->get_cart_contents_count();
+                $titleMenuItem = __('View your shopping cart', 'your-theme-slug');
+                if ($countCartContents == 0) {
+                    $titleMenuItem = __('Start shopping', 'your-theme-slug');
+                }
+                $textCartItems = _n('%d item', '%d items', $countCartContents, 'woocommerce');
+                $textCartItems = sprintf($textCartItems, $countCartContents);
+                $textCartTotal = WC()->cart->get_cart_total();
 
-    /**
-     * @param string $items The HTML list content for the menu items.
-     * @param \stdClass $args An object containing wp_nav_menu() arguments.
-     * @return string Modified HTML list content for the menu items.
-     */
-    function handleNavMenuItems(string $items, \stdClass $args)
-    {
-        $linkAddToCart = $this->getAddToCartLink();
-        if ($linkAddToCart !== '' && 'primary' !== $args->theme_location) {
-            //ob_start();the_widget(WC_Widget_Cart::class); $subMenu = ob_get_clean();
-            //$items .= "<li class='menu-item menu-item-has-children'>{$linkAddToCart}<ul class='sub-menu'><li class='menu-item'>{$subMenu}</li></ul></li>";
-            $items .= "<li class='menu-item'>{$linkAddToCart}</li>";
+                $item->title = "<i class='fa fa-shopping-cart'></i> {$textCartItems} - {$textCartTotal}";
+                $attributes['class'] = 'cart-contents';
+                $attributes['title'] = $titleMenuItem;
+            }
         }
-        return $items;
+        return $attributes;
     }
 
     function handleNavMenuItemsAddToCart($fragments)
