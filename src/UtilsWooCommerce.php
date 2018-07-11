@@ -16,38 +16,41 @@ final class UtilsWooCommerce
 
     protected function __construct()
     {
-        /** Add WooComerce Theme Support */
-        add_action('after_setup_theme', [$this, 'addSupportOfWooCommerce']);
-        add_action('woocommerce_login_redirect', [$this, 'handleWooCommerceLoginRedirect'], 10, 1);
-        /** Add: Menu Item Add to cart*/
-        add_filter(WPActions::NAV_MENU_ITEM_LINK_ATTRIBUTES, [$this, 'handleNavMenuItemLinkAttributes'], 10, 4);
-        add_filter('woocommerce_add_to_cart_fragments', [$this, 'handleNavMenuItemsAddToCart']);
-        /** Remove: Product Link open and close tag*/
-        remove_action('woocommerce_before_shop_loop_item',
-            'woocommerce_template_loop_product_link_open', 10);
-        remove_action('woocommerce_after_shop_loop_item',
-            'woocommerce_template_loop_product_link_close', 5);
+        $activePlugins = apply_filters('active_plugins', get_option('active_plugins'));
+        if (in_array('woocommerce/woocommerce.php', $activePlugins)) {
+            /** Add WooComerce Theme Support */
+            add_action('after_setup_theme', [$this, 'addSupportOfWooCommerce']);
+            add_action('woocommerce_login_redirect', [$this, 'handleWooCommerceLoginRedirect'], 10, 1);
+            /** Add: Menu Item Add to cart*/
+            add_filter(WPActions::NAV_MENU_ITEM_LINK_ATTRIBUTES, [$this, 'handleNavMenuItemLinkAttributes'], 10, 4);
+            add_filter('woocommerce_add_to_cart_fragments', [$this, 'handleNavMenuItemsAddToCart']);
+            /** Remove: Product Link open and close tag*/
+            remove_action('woocommerce_before_shop_loop_item',
+                'woocommerce_template_loop_product_link_open', 10);
+            remove_action('woocommerce_after_shop_loop_item',
+                'woocommerce_template_loop_product_link_close', 5);
 
-        add_action('woocommerce_before_shop_loop_item', [$this, 'handleBeforeShopLoopItem'], 10);
-        add_action('woocommerce_after_shop_loop_item', [$this, 'handleAfterShopLoopItem'], 5);
-        /* Remove: Thumbnail */
-        remove_action('woocommerce_before_shop_loop_item_title',
-            'woocommerce_template_loop_product_thumbnail', 10);
-        add_action('woocommerce_before_shop_loop_item_title', [$this, 'handleBeforeShopLoopItemTitleThumb'], 10);
-        /* Remove: Product Title*/
-        remove_action('woocommerce_shop_loop_item_title',
-            'woocommerce_template_loop_product_title', 10);
-        add_action('woocommerce_shop_loop_item_title', [$this, 'handleBeforeShopLoopItemTitle']);
-        /* Remove: Rating*/
-        remove_action('woocommerce_after_shop_loop_item_title',
-            'woocommerce_template_loop_rating', 5);
-        /* Remove: Price*/
-        remove_action('woocommerce_after_shop_loop_item_title',
-            'woocommerce_template_loop_price', 10);
-        add_action('woocommerce_after_shop_loop_item_title', [$this, 'handleAfterShopLoopItemTitle']);
-        /* Remove: Add to Cart*/
-        remove_action('woocommerce_after_shop_loop_item',
-            'woocommerce_template_loop_add_to_cart', 10);
+            add_action('woocommerce_before_shop_loop_item', [$this, 'handleBeforeShopLoopItem'], 10);
+            add_action('woocommerce_after_shop_loop_item', [$this, 'handleAfterShopLoopItem'], 5);
+            /* Remove: Thumbnail */
+            remove_action('woocommerce_before_shop_loop_item_title',
+                'woocommerce_template_loop_product_thumbnail', 10);
+            add_action('woocommerce_before_shop_loop_item_title', [$this, 'handleBeforeShopLoopItemTitleThumb'], 10);
+            /* Remove: Product Title*/
+            remove_action('woocommerce_shop_loop_item_title',
+                'woocommerce_template_loop_product_title', 10);
+            add_action('woocommerce_shop_loop_item_title', [$this, 'handleBeforeShopLoopItemTitle']);
+            /* Remove: Rating*/
+            remove_action('woocommerce_after_shop_loop_item_title',
+                'woocommerce_template_loop_rating', 5);
+            /* Remove: Price*/
+            remove_action('woocommerce_after_shop_loop_item_title',
+                'woocommerce_template_loop_price', 10);
+            add_action('woocommerce_after_shop_loop_item_title', [$this, 'handleAfterShopLoopItemTitle']);
+            /* Remove: Add to Cart*/
+            remove_action('woocommerce_after_shop_loop_item',
+                'woocommerce_template_loop_add_to_cart', 10);
+        }
     }
 
     /** Add WooComerce Theme Support */
@@ -97,6 +100,21 @@ final class UtilsWooCommerce
         return $textRating;
     }
 
+    function getCartTitle(){
+        $result = __('Cart','woocommerce');
+        $countCartContents = WC()->cart->get_cart_contents_count();
+        if ($countCartContents !== 0) {
+            $textCartTotal = WC()->cart->get_cart_total();
+            $textCartItems = _n('%s item', '%s items', $countCartContents, 'woocommerce');
+            $textCartItems = sprintf($textCartItems, $countCartContents);
+            $result = "<i class='fa fa-shopping-cart'></i>{$textCartItems} - {$textCartTotal}";
+            $attributes['title'] = __('View cart', 'woocommerce');
+        } else {
+            $result = "<i class='fa fa-shopping-cart'></i> {$result}";
+        }
+
+        return "<span class='cart-contents'>$result</span>";
+    }
     /**
      * Filters the HTML attributes applied to a menu item's anchor element.
      * @param array $attributes The HTML attributes applied to the menu item's `<a>` element, empty strings are ignored.
@@ -107,22 +125,10 @@ final class UtilsWooCommerce
      */
     function handleNavMenuItemLinkAttributes(array $attributes, \WP_Post $item, \stdClass $args, int $depth)
     {
-        $activePlugins = apply_filters('active_plugins', get_option('active_plugins'));
-        if (in_array('woocommerce/woocommerce.php', $activePlugins) && $args->theme_location == '' && $depth == 0){
+        if ($args->theme_location == '' && $depth == 0){
             $urlMenuItem = wc_get_cart_url();
-            if ($urlMenuItem == $attributes['href']){
-                $countCartContents = WC()->cart->get_cart_contents_count();
-                $titleMenuItem = __('View your shopping cart', 'your-theme-slug');
-                if ($countCartContents == 0) {
-                    $titleMenuItem = __('Start shopping', 'your-theme-slug');
-                }
-                $textCartItems = _n('%d item', '%d items', $countCartContents, 'woocommerce');
-                $textCartItems = sprintf($textCartItems, $countCartContents);
-                $textCartTotal = WC()->cart->get_cart_total();
-
-                $item->title = "<i class='fa fa-shopping-cart'></i> {$textCartItems} - {$textCartTotal}";
-                $attributes['class'] = 'cart-contents';
-                $attributes['title'] = $titleMenuItem;
+            if ($urlMenuItem === $attributes['href']){
+                $item->title = $this->getCartTitle();
             }
         }
         return $attributes;
@@ -130,7 +136,7 @@ final class UtilsWooCommerce
 
     function handleNavMenuItemsAddToCart($fragments)
     {
-        $fragments['a.cart-contents'] = $this->getAddToCartLink();
+        $fragments['span.cart-contents'] = $this->getCartTitle();
         return $fragments;
     }
 
