@@ -51,7 +51,6 @@ abstract class WidgetDialogBase extends Widget
         wp_deregister_script('jquery-form');
         wp_enqueue_script('jquery-form', includes_url('js/jquery/jquery.form.js'), ['jquery'],
             false, true);
-        wp_enqueue_script('knockout', "{$uriToDirLibs}/knockout.js", [], false, true);
         parent::enqueueScriptsTheme();
     }
 

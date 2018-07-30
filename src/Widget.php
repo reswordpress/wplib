@@ -371,7 +371,8 @@ abstract class Widget extends WP_Widget
      */
     function enqueueScriptsTheme()
     {
-
+        $uriToDirLibs = WPUtils::getUriToLibsDir();
+        wp_enqueue_script('knockout', "{$uriToDirLibs}/knockout.js", [], false, true);
     }
 
     /** Load Styles & Scripts for: Backend*/
