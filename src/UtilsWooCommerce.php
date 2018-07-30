@@ -66,18 +66,146 @@ final class UtilsWooCommerce
             //add_filter( 'woocommerce_billing_fields' , [$this, 'handleFieldsBilling']);
             //add_filter( 'woocommerce_shipping_fields' , [$this, 'handleFieldsShipping']);
             //add_filter( 'woocommerce_checkout_fields' , [$this, 'handleFieldsCheckout']);
-            add_filter( 'woocommerce_default_address_fields' , [$this, 'handleFieldsDefault']);
+            add_filter('woocommerce_default_address_fields', [$this, 'handleFieldsDefault']);
             $nameSetting = 'woocommerce_enable_guest_checkout';
-            add_filter( "pre_option_{$nameSetting}", [$this, 'handlePreOptionEnableGuestCheckout'] );
+            add_filter("pre_option_{$nameSetting}", [$this, 'handlePreOptionEnableGuestCheckout']);
 
             add_action(WPActions::ENQUEUE_SCRIPTS_THEME, [$this, 'enqueueScriptsTheme']);
         }
     }
 
-    public static function handlePreOptionEnableGuestCheckout(){
+    public static function getCartContents()
+    {
+        $contentCartItems = '';
+        $filterNameCartItemVisible = 'woocommerce_widget_cart_item_visible';
+        $filterNameCartItemQty = 'woocommerce_widget_cart_item_quantity';
+        $cartItemClass = 'woocommerce-mini-cart-item mini_cart_item';
+        if (is_page('cart') || is_cart()) {
+            $filterNameCartItemVisible = 'woocommerce_cart_item_visible';
+            $filterNameCartItemQty = 'woocommerce_cart_item_quantity';
+            $cartItemClass = 'woocommerce-cart-form__cart-item cart_item';
+        }
+        foreach (wc()->cart->get_cart() as $cartItemKey => $cartItem) {
+            /**@var  $cartProduct \WC_Product */
+            $cartProduct = apply_filters('woocommerce_cart_item_product', $cartItem['data'], $cartItem, $cartItemKey);
+            if ($cartProduct && $cartProduct->exists() && $cartItem['quantity'] > 0 &&
+                apply_filters($filterNameCartItemVisible, true, $cartItem, $cartItemKey)) {
+                //Image
+                $cartProductImage = $cartProduct->get_image('woocommerce_thumbnail', ['class' => 'align-middle']);
+                $cartProductImage = apply_filters('woocommerce_cart_item_thumbnail', $cartProductImage, $cartItem, $cartItemKey);
+                $cartProductImage = wp_kses_post($cartProductImage);
+                //Name
+                $cartProductName = $cartProduct->get_name();
+                $cartProductName = apply_filters('woocommerce_cart_item_name', $cartProductName, $cartItem, $cartItemKey);
+                $cartProductName = wp_kses_post($cartProductName);
+                //Link
+                $cartProductLink = '';
+                if ($cartProduct->is_visible()) {
+                    $cartProductLink = $cartProduct->get_permalink();
+                }
+                $cartProductLink = apply_filters('woocommerce_cart_item_permalink', $cartProductLink, $cartItem, $cartItemKey);
+                $cartProductLink = esc_url($cartProductLink);
+                //Attributes
+                $cartProductAttr = wc_get_formatted_cart_item_data($cartItem);
+                //Back Order Notifications
+                $cartProductBackOrder = '';
+                if ($cartProduct->backorders_require_notification() && $cartProduct->is_on_backorder($cartItem['quantity'])) {
+                    $textAvailableOnBackOrder = __('Available on backorder', 'woocommerce');
+                    $cartProductItemBackOrderMarkup = "<p class='backorder_notification'>$textAvailableOnBackOrder</p>";
+                    $cartProductBackOrder = apply_filters('woocommerce_cart_item_backorder_notification', $cartProductItemBackOrderMarkup);
+                    $cartProductBackOrder = wp_kses_post($cartProductBackOrder);
+                }
+                //Price
+                $cartProductPrice = wc()->cart->get_product_price($cartProduct);
+                $cartProductPrice = apply_filters('woocommerce_cart_item_price', $cartProductPrice, $cartItem, $cartItemKey);
+                //Quantity
+                if ($cartProduct->is_sold_individually()) {
+                    $cartProductQty = sprintf('1 <input type="hidden" name="cart[%s][qty]" value="1">', $cartItemKey);
+                } else {
+                    $cartProductQty = woocommerce_quantity_input([
+                        'input_name' => "cart[{$cartItemKey}][qty]",
+                        'input_value' => $cartItem['quantity'],
+                        'max_value' => $cartProduct->get_max_purchase_quantity(),
+                        'min_value' => '0',
+                        'product_name' => $cartProductName,
+                    ], $cartProduct, false);
+                }
+                $cartProductQty = apply_filters($filterNameCartItemQty, $cartProductQty, $cartItemKey, $cartItem);
+                //Total
+                $cartProductPriceSubTotal = wc()->cart->get_product_subtotal($cartProduct, $cartItem['quantity']);
+                $cartProductPriceTotal = apply_filters('woocommerce_cart_item_subtotal', $cartProductPriceSubTotal,
+                    $cartItem, $cartItemKey);
+                //Remove Action
+                $textRemove = __('Remove', 'woocommerce');
+                $cartProductUrl = esc_url(wc_get_cart_remove_url($cartItemKey));
+                $cartProductId = apply_filters('woocommerce_cart_item_product_id', $cartItem['product_id'], $cartItem,
+                    $cartItemKey);
+                $cartProductDataAttr = '';
+                if ($cartProductId) {
+                    $cartProductDataAttr .= " data-product_id='{$cartProductId}'";
+                }
+                $cartProductSku = esc_attr($cartProduct->get_sku());
+                if ($cartProductSku) {
+                    $cartProductDataAttr .= " data-product_sku='{$cartProductSku}'";
+                }
+                if ($cartItemKey) {
+                    $cartProductDataAttr .= " data-cart_item_key='{$cartItemKey}'";
+                }
+
+                $cartProductRemoveButton = "<a href='{$cartProductUrl}' title='{$textRemove}' class='remove_from_cart_button' {$cartProductDataAttr}>
+                <i class='fa fa-trash'></i> {$textRemove}</a>";
+                $cartProductRemoveButton = apply_filters('woocommerce_cart_item_remove_link', $cartProductRemoveButton, $cartItemKey);
+                //Content
+                $cssCartItem = apply_filters("woocommerce_{$cartItemClass}_class", $cartItemClass, $cartItem, $cartItemKey);
+                $cssCartItem = esc_attr($cssCartItem);
+                $contentCartItems .= "<div class='row {$cssCartItem}'>
+                <div class='col-lg-1'>{$cartProductImage}</div>
+                <div class='col-lg-4'>
+                    <a href='{$cartProductLink}'>{$cartProductName}</a>
+                    {$cartProductAttr}
+                    {$cartProductBackOrder}
+                </div>
+                <div class='col-lg-1 text-xs-center'>{$cartProductPrice}</div>
+                <div class='col-lg-2 text-xs-center'>{$cartProductQty}</div>
+                <div class='col-lg-1 text-xs-center'>{$cartProductPriceTotal}</div>
+                <div class='col-lg-3 text-xs-center'>{$cartProductRemoveButton}</div></div>";
+            }
+        }
+        return $contentCartItems;
+    }
+
+    public static function getShippingMethodLabel(\WC_Shipping_Rate $method)
+    {
+        $label = $method->get_label();
+        $method_key_id = str_replace(':', '_', $method->id);
+        $methodLabel = get_option("woocommerce_{$method_key_id}_settings", true)['title'];
+        if ($methodLabel) {
+            $label = $methodLabel;
+        }
+        if ($method->cost >= 0 && $method->get_method_id() !== 'free_shipping') {
+            if (wc()->cart->display_prices_including_tax()) {
+                $label .= ': ' . wc_price($method->cost + $method->get_shipping_tax());
+                if ($method->get_shipping_tax() > 0 && !wc_prices_include_tax()) {
+                    $label .= ' <small class="tax_label">' . wc()->countries->inc_tax_or_vat() . '</small>';
+                }
+            } else {
+                $label .= ': ' . wc_price($method->cost);
+                if ($method->get_shipping_tax() > 0 && wc_prices_include_tax()) {
+                    $label .= ' <small class="tax_label">' . wc()->countries->ex_tax_or_vat() . '</small>';
+                }
+            }
+        }
+
+        return apply_filters('woocommerce_cart_shipping_method_full_label', $label, $method);
+    }
+
+    public static function handlePreOptionEnableGuestCheckout()
+    {
         return 'no';
     }
-    public static function handleFieldsBilling($addressFields){
+
+    public static function handleFieldsBilling($addressFields)
+    {
         /*
         billing_first_name 10
         billing_last_name  20
@@ -94,7 +222,9 @@ final class UtilsWooCommerce
         */
         return $addressFields;
     }
-    public static function handleFieldsShipping($addressFields){
+
+    public static function handleFieldsShipping($addressFields)
+    {
         /*
         shipping_first_name 10
         shipping_last_name  20
@@ -109,13 +239,17 @@ final class UtilsWooCommerce
         */
         return $addressFields;
     }
-    public static function handleFieldsCheckout($addressFields){
+
+    public static function handleFieldsCheckout($addressFields)
+    {
         //$addressFields['billing']['billing_first_name']['priority'] = 10;
         //$addressFields['shipping']['shipping_first_name']['priority'] = 10;
         //$addressFields['order']['order_comments']['priority'] = 10;
         return $addressFields;
     }
-    public static function handleFieldsDefault($addressFields){
+
+    public static function handleFieldsDefault($addressFields)
+    {
         /*
         first_name 10
         last_name  20
@@ -143,9 +277,19 @@ final class UtilsWooCommerce
     function enqueueScriptsTheme()
     {
         wp_deregister_script('wc-address-i18n');
+        wp_deregister_script('wc-cart');
+        wp_deregister_script('wc-add-to-cart');
+        wp_deregister_script('wc-add-to-cart-variation');
         wp_deregister_script('selectWoo');
         $uriToLibs = get_template_directory_uri() . '/libs/';
-        wp_enqueue_script('wc-address-i18n', $uriToLibs . 'address-i18n.js', [], false, true);
+        wp_enqueue_script('wc-address-i18n', $uriToLibs . 'address-i18n.js', ['jquery'],
+            false, true);
+        wp_enqueue_script('wc-add-to-cart', $uriToLibs . 'add-to-cart.js', ['jquery'],
+            false, true);
+        wp_enqueue_script('wc-add-to-cart-variation', $uriToLibs . 'add-to-cart-variation.js',
+            ['jquery', 'wp-util'], false, true);
+        wp_enqueue_script('wc-cart', $uriToLibs . 'cart.js',
+            ['jquery', 'woocommerce', 'wc-country-select', 'wc-address-i18n'], false, true);
     }
 
     function handleEditAddressEndpoint()
@@ -203,9 +347,9 @@ final class UtilsWooCommerce
     function getCartTitle()
     {
         $result = __('Cart', 'woocommerce');
-        $countCartContents = WC()->cart->get_cart_contents_count();
+        $countCartContents = wc()->cart->get_cart_contents_count();
         if ($countCartContents !== 0) {
-            $textCartTotal = WC()->cart->get_cart_total();
+            $textCartTotal = wc()->cart->get_cart_total();
             $textCartItems = _n('%s item', '%s items', $countCartContents, 'woocommerce');
             $textCartItems = sprintf($textCartItems, $countCartContents);
             $result = "<i class='fa fa-shopping-cart'></i>{$textCartItems} - {$textCartTotal}";
@@ -453,9 +597,9 @@ final class UtilsWooCommerce
                 break;
             case 'country':
                 if ($key === 'shipping_country') {
-                    $countries = WC()->countries->get_shipping_countries();
+                    $countries = wc()->countries->get_shipping_countries();
                 } else {
-                    $countries = WC()->countries->get_allowed_countries();
+                    $countries = wc()->countries->get_allowed_countries();
                 }
                 if (1 === count($countries)) {
                     $inputValue = current(array_keys($countries));
@@ -487,9 +631,9 @@ final class UtilsWooCommerce
                     if ('billing_state' === $key) {
                         $billingState = 'billing_country';
                     }
-                    $currentCountry = WC()->checkout->get_value($billingState);
+                    $currentCountry = wc()->checkout->get_value($billingState);
                 }
-                $states = WC()->countries->get_states($currentCountry);
+                $states = wc()->countries->get_states($currentCountry);
                 if (is_array($states) && empty($states)) {
                     $field .= "<input id='{$inputId}' name='{$inputName}' placeholder='{$inputPlaceHolder}' {$inputAttrs}  
                     class='hidden' value='' readonly='readonly' type='hidden'>";
@@ -578,7 +722,7 @@ final class UtilsWooCommerce
                     $user_id = get_current_user_id();
                     $load_address = substr($_POST['action'], strlen('edit_address_'));
                     if ($user_id > 0 && empty($load_address) === false) {
-                        $address = WC()->countries->get_address_fields(esc_attr($_POST[$load_address . '_country']), $load_address . '_');
+                        $address = wc()->countries->get_address_fields(esc_attr($_POST[$load_address . '_country']), $load_address . '_');
                         foreach ($address as $key => $field) {
                             if (!isset($field['type'])) {
                                 $field['type'] = 'text';
@@ -647,8 +791,8 @@ final class UtilsWooCommerce
                                         $customer->update_meta_data($key, wc_clean($_POST[$key]));
                                     }
 
-                                    if (WC()->customer && is_callable(array(WC()->customer, "set_$key"))) {
-                                        WC()->customer->{"set_$key"}(wc_clean($_POST[$key]));
+                                    if (wc()->customer && is_callable(array(wc()->customer, "set_$key"))) {
+                                        wc()->customer->{"set_$key"}(wc_clean($_POST[$key]));
                                     }
                                 }
                                 $customer->save();
